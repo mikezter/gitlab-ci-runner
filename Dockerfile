@@ -36,6 +36,7 @@ RUN dpkg-divert --local --rename --add /sbin/initctl && rm -f /sbin/initctl && l
 RUN apt-get install -y libqtwebkit-dev # test with capybara
 RUN apt-get install -y sqlite3 libsqlite3-dev # sqlite is the default datastore
 RUN apt-get install -y libmysqlclient-dev # native extensions for the mysql2 gem
+RUN apt-get install -y libmagickwand-dev pdftk imagemagick
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -q -y mysql-server # install MySQL with blank root password
 RUN cd /root && wget http://download.redis.io/redis-stable.tar.gz && tar xvzf redis-stable.tar.gz && cd redis-stable && make
 
@@ -45,13 +46,19 @@ RUN locale-gen en_US.UTF-8
 RUN update-locale LANG=en_US.UTF-8
 
 # Install PostgreSQL, after install this should work: psql --host=127.0.0.1 roottestdb
-RUN apt-get install -y postgresql
-RUN cat /dev/null > /etc/postgresql/9.1/main/pg_hba.conf
-RUN echo "# TYPE DATABASE USER ADDRESS METHOD" >> /etc/postgresql/9.1/main/pg_hba.conf
-RUN echo "local  all  all  trust" >> /etc/postgresql/9.1/main/pg_hba.conf
-RUN echo "host all all 127.0.0.1/32 trust" >> /etc/postgresql/9.1/main/pg_hba.conf
-RUN echo "host all all  ::1/128 trust" >> /etc/postgresql/9.1/main/pg_hba.conf
-RUN /etc/init.d/postgresql start && su postgres -c "psql -c \"create user root;\"" && su postgres -c "psql -c \"alter user root createdb;\"" && su postgres -c "psql -c \"create database roottestdb owner root;\""
+#RUN apt-get install -y postgresql
+#RUN cat /dev/null > /etc/postgresql/9.1/main/pg_hba.conf
+#RUN echo "# TYPE DATABASE USER ADDRESS METHOD" >> /etc/postgresql/9.1/main/pg_hba.conf
+#RUN echo "local  all  all  trust" >> /etc/postgresql/9.1/main/pg_hba.conf
+#RUN echo "host all all 127.0.0.1/32 trust" >> /etc/postgresql/9.1/main/pg_hba.conf
+#RUN echo "host all all  ::1/128 trust" >> /etc/postgresql/9.1/main/pg_hba.conf
+#RUN /etc/init.d/postgresql start && su postgres -c "psql -c \"create user root;\"" && su postgres -c "psql -c \"alter user root createdb;\"" && su postgres -c "psql -c \"create database roottestdb owner root;\""
+
+# Install Mongodb latest from 10gen 
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+RUN echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list
+RUN apt-get update
+RUN apt-get install mongodb-org
 
 # Prepare a known host file for non-interactive ssh connections
 RUN mkdir -p /root/.ssh
@@ -65,4 +72,4 @@ RUN cd /gitlab-ci-runner && gem install bundler && bundle install
 
 # When the image is started add the remote server key, set up the runner and run it
 WORKDIR /gitlab-ci-runner
-CMD ssh-keyscan -H $GITLAB_SERVER_FQDN >> /root/.ssh/known_hosts && mysqld & /root/redis-stable/src/redis-server & /etc/init.d/postgresql start & bundle exec ./bin/setup_and_run
+CMD ssh-keyscan -H $GITLAB_SERVER_FQDN >> /root/.ssh/known_hosts && mongod -f /etc/mongodb.conf & mysqld & /root/redis-stable/src/redis-server & /etc/init.d/postgresql start & bundle exec ./bin/setup_and_run

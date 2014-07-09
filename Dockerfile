@@ -1,6 +1,6 @@
 # gitlab-ci-runner
 
-FROM ubuntu:12.04
+FROM ubuntu:14.04
 MAINTAINER  Sytse Sijbrandij "sytse@gitlab.com"
 
 # This script will start a runner in a docker container.
@@ -24,12 +24,21 @@ MAINTAINER  Sytse Sijbrandij "sytse@gitlab.com"
 RUN apt-get update -y
 RUN apt-get install -y wget curl gcc libxml2-dev libxslt-dev libcurl4-openssl-dev libreadline6-dev libc6-dev libssl-dev make build-essential zlib1g-dev openssh-server git-core libyaml-dev postfix libpq-dev libicu-dev
 
-# Download Ruby and compile it
-RUN mkdir /tmp/ruby && cd /tmp/ruby && curl --progress http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.2.tar.gz | tar xz
-RUN cd /tmp/ruby/ruby-2.1.2 && ./configure --disable-install-rdoc && make && make install
-
 # Fix upstart under a virtual host https://github.com/dotcloud/docker/issues/1024
 RUN dpkg-divert --local --rename --add /sbin/initctl && rm -f /sbin/initctl && ln -s /bin/true /sbin/initctl
+
+# Download Ruby and compile it
+#RUN mkdir /tmp/ruby && cd /tmp/ruby && curl --progress http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.2.tar.gz | tar xz
+#RUN cd /tmp/ruby/ruby-2.1.2 && ./configure --disable-install-rdoc && make && make install
+
+# Install Rubies via rbenv
+RUN git clone https://github.com/sstephenson/rbenv.git ~/.rbenv
+RUN git clone https://github.com/sstephenson/ruby-build.git ~/.rbenv/plugins/ruby-build
+RUN echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bash_profile
+RUN ~/.rbenv/bin/rbenv install 1.9.3-p547
+RUN ~/.rbenv/bin/rbenv install 2.0.0-p481
+RUN ~/.rbenv/bin/rbenv install 2.1.2
+
 
 # Install packages commonly required to test Rails projects before the test run starts
 # If they are not here you have to add them to the test script in the project settings
@@ -54,7 +63,7 @@ RUN update-locale LANG=en_US.UTF-8
 #RUN echo "host all all  ::1/128 trust" >> /etc/postgresql/9.1/main/pg_hba.conf
 #RUN /etc/init.d/postgresql start && su postgres -c "psql -c \"create user root;\"" && su postgres -c "psql -c \"alter user root createdb;\"" && su postgres -c "psql -c \"create database roottestdb owner root;\""
 
-# Install Mongodb latest from 10gen 
+# Install Mongodb latest from 10gen
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
 RUN echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | tee /etc/apt/sources.list.d/mongodb.list
 RUN apt-get update -y
@@ -68,7 +77,7 @@ RUN touch /root/.ssh/known_hosts
 RUN git clone https://github.com/gitlabhq/gitlab-ci-runner.git /gitlab-ci-runner
 
 # Install the gems for the runner
-RUN cd /gitlab-ci-runner && gem install bundler && bundle install
+RUN cd /gitlab-ci-runner && eval "$(~/.rbenv/bin/rbenv init -)" && ~/.rbenv/bin/rbenv local 2.0.0-p481 && gem install bundler && ~/.rbenv/bin/rbenv rehash && bundle install
 
 # When the image is started add the remote server key, set up the runner and run it
 WORKDIR /gitlab-ci-runner

@@ -72,4 +72,4 @@ RUN cd /gitlab-ci-runner && gem install bundler && bundle install
 
 # When the image is started add the remote server key, set up the runner and run it
 WORKDIR /gitlab-ci-runner
-CMD ssh-keyscan -H $GITLAB_SERVER_FQDN >> /root/.ssh/known_hosts && mongod -f /etc/mongodb.conf & mysqld & /root/redis-stable/src/redis-server & /etc/init.d/postgresql start & bundle exec ./bin/setup_and_run
+CMD ssh-keyscan -H $GITLAB_SERVER_FQDN >> /root/.ssh/known_hosts && mongod -f /etc/mongodb.conf & mysqld & /root/redis-stable/src/redis-server & bundle exec ./bin/setup_and_run
